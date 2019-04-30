@@ -25,7 +25,7 @@ namespace GitMan
 
             _main = new Main();
 
-            _settings = Settings.CreateDefault();
+            _settings = Settings.Load();
         }
 
         private void Icon_DoubleClick(object sender, EventArgs e)
