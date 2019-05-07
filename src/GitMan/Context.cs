@@ -1,4 +1,6 @@
-﻿using System;
+﻿using GitMan.Clients;
+using GitMan.Config;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -53,7 +55,14 @@ namespace GitMan
             var directory = new DirectoryInfo(_settings.RepositoryFolder);
             var repositoryList = RepositoryList.Load(directory);
 
-            var items = repositoryList.Select(MakeMenuItem).ToList();
+            var items = new List<MenuItem>();
+
+            var cloneItem = MakeCloneItem(repositoryList);
+            items.Add(cloneItem);
+
+            var repositoryItems = repositoryList.Select(MakeMenuItem).ToArray();
+            items.AddRange(repositoryItems);
+
             var exitItem = MakeExitItem();
             items.Add(exitItem);
 
@@ -96,14 +105,13 @@ namespace GitMan
                 subItems.Add(solutionItem);
             }
 
-            var item = new MenuItem(name, subItems.ToArray());
-
-            return item;
+            var menuItem = new MenuItem(name, subItems.ToArray());
+            return menuItem;
         }
 
         private static MenuItem MakeSolutionItem(FileInfo solutionFile)
         {
-            void OnClick(object sender, EventArgs eventArgs)
+            void onClick(object sender, EventArgs eventArgs)
             {
                 var startInfo = new ProcessStartInfo
                 {
@@ -115,7 +123,8 @@ namespace GitMan
             }
 
             var name = $"Open {solutionFile.Name}";
-            return new MenuItem(name, OnClick);
+            var menuItem = new MenuItem(name, onClick);
+            return menuItem;
         }
 
         private bool GitBashExists()
@@ -126,7 +135,7 @@ namespace GitMan
 
         private MenuItem MakeGitBashItem(Repository repository)
         {
-            void OnClick(object sender, EventArgs eventArgs)
+            void onClick(object sender, EventArgs eventArgs)
             {
                 var fullName = repository.FullName;
                 var argument = $"--cd=\"{fullName}\"";
@@ -141,12 +150,13 @@ namespace GitMan
             }
 
             const string name = "Git bash";
-            return new MenuItem(name, OnClick);
+            var menuItem = new MenuItem(name, onClick);
+            return menuItem;
         }
 
         private static MenuItem MakeFolderItem(Repository repository)
         {
-            void OnClick(object sender, EventArgs eventArgs)
+            void onClick(object sender, EventArgs eventArgs)
             {
                 var startInfo = new ProcessStartInfo
                 {
@@ -158,7 +168,8 @@ namespace GitMan
             }
 
             const string name = "Open folder";
-            return new MenuItem(name, OnClick);
+            var menuItem = new MenuItem(name, onClick);
+            return menuItem;
         }
 
         private bool VsCodeExists()
@@ -169,7 +180,7 @@ namespace GitMan
 
         private MenuItem MakeVsCodeItem(Repository repository)
         {
-            void OnClick(object sender, EventArgs eventArgs)
+            void onClick(object sender, EventArgs eventArgs)
             {
                 var vsCodePath = _settings.VsCodePath;
                 var fullName = repository.FullName;
@@ -184,18 +195,113 @@ namespace GitMan
             }
 
             const string name = "VS Code";
-            return new MenuItem(name, OnClick);
+            var menuItem = new MenuItem(name, onClick);
+            return menuItem;
         }
 
         private MenuItem MakeExitItem()
         {
-            void OnClick(object sender, EventArgs eventArgs)
+            void onClick(object sender, EventArgs eventArgs)
             {
                 ExitThread();
             }
 
             const string name = "Exit";
-            return new MenuItem(name, OnClick);
+            return new MenuItem(name, onClick);
+        }
+
+        private MenuItem MakeCloneItem(RepositoryList existingRepositories)
+        {
+            var items = new List<MenuItem>();
+
+            foreach (var provider in _settings.AzureProviders)
+            {
+                var item = MakeAzureProviderItem(existingRepositories, provider);
+                items.Add(item);
+            }
+
+            const string name = "Clone";
+            var itemArray = items.ToArray();
+
+            return new MenuItem(name, itemArray);
+        }
+
+        private MenuItem MakeAzureProviderItem(
+            RepositoryList existingRepositories,
+            AzureProvider provider)
+        {
+            var loadItem = new MenuItem("Loading...");
+            var dummyItems = new[] { loadItem };
+
+            MenuItem menuItem = default;
+
+            var name = $"{provider.Organization} - {provider.Project}";
+            var mergeType = MenuMerge.Add;
+            var mergeOrder = 0;
+            var shortcut = Shortcut.None;
+
+            void onClick(object sender, EventArgs eventArgs) { }
+
+            void onPopup(object sender, EventArgs eventArgs)
+            {
+                var clientConfig = new AzureClientConfig
+                {
+                    Organization = provider.Organization,
+                    Project = provider.Project,
+                    PersonalAccessToken = provider.PersonalAccessToken,
+                };
+
+                var client = new AzureClient(clientConfig);
+
+                var repositories = client.GetRepositories()
+                    .Where(repository => !existingRepositories.Any(existing => existing.Name == repository.Name))
+                    .OrderBy(repository => repository.Name);
+
+                var menuItems = repositories
+                    .Select(repository => MakeAzureRepositoryItem(repository, provider))
+                    .ToArray();
+
+                menuItem.MenuItems.Clear();
+                menuItem.MenuItems.AddRange(menuItems);
+            }
+
+            void onSelect(object sender, EventArgs eventArgs) { }
+
+            menuItem = new MenuItem(
+                mergeType,
+                mergeOrder,
+                shortcut,
+                name,
+                onClick,
+                onPopup,
+                onSelect,
+                dummyItems);
+
+            return menuItem;
+        }
+
+        private MenuItem MakeAzureRepositoryItem(AzureRepository repository, AzureProvider provider)
+        {
+            var name = repository.Name;
+
+            void onClick(object sender, EventArgs eventArgs)
+            {
+                var configs = provider.DefaultConfig.Select(pair => $"--config \"{pair.Key}={pair.Value}\"");
+                var argument = $"clone \"{repository.RemoteUrl}\" {string.Join(' ', configs)}";
+
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = "git",
+                    Arguments = argument,
+                    UseShellExecute = true,
+                    WorkingDirectory = _settings.RepositoryFolder,
+                };
+
+                Process.Start(startInfo);
+            }
+
+            var menuItem = new MenuItem(name, onClick);
+            return menuItem;
         }
     }
 }

@@ -1,16 +1,15 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.IO;
-using System.Text.Json.Serialization;
 
-namespace GitMan
+namespace GitMan.Config
 {
     internal class Settings
     {
         public string RepositoryFolder { get; set; }
-
         public string VsCodePath { get; set; }
-
         public string GitBashPath { get; set; }
+        public AzureProvider[] AzureProviders { get; set; }
 
         private static Settings CreateDefault()
         {
@@ -18,12 +17,14 @@ namespace GitMan
             var repositoryFolder = Path.Combine(userProfile, "./Source/Repos");
             var vsCodePath = Path.Combine(userProfile, "./AppData/Local/Programs/Microsoft VS Code/Code.exe");
             const string gitBashPath = "C:/Program Files/Git/git-bash.exe";
+            var azureProviders = Array.Empty<AzureProvider>();
 
             var settings = new Settings
             {
                 RepositoryFolder = repositoryFolder,
                 VsCodePath = vsCodePath,
                 GitBashPath = gitBashPath,
+                AzureProviders = azureProviders,
             };
 
             return settings;
@@ -36,11 +37,12 @@ namespace GitMan
             if (File.Exists("config.json"))
             {
                 var json = File.ReadAllText("config.json");
-                settings = JsonSerializer.Parse<Settings>(json);
+                settings = JsonConvert.DeserializeObject<Settings>(json);
             }
             else
             {
                 settings = CreateDefault();
+                settings.Save();
             }
 
             return settings;
@@ -48,7 +50,7 @@ namespace GitMan
 
         public void Save()
         {
-            var json = JsonSerializer.ToString(this);
+            var json = JsonConvert.SerializeObject(this);
             File.WriteAllText("config.json", json);
         }
     }
