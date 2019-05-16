@@ -244,6 +244,9 @@ namespace GitMan
 
             void onPopup(object sender, EventArgs eventArgs)
             {
+                var originalCursor = Cursor.Current;
+                Cursor.Current = Cursors.WaitCursor;
+
                 var clientConfig = new AzureClientConfig
                 {
                     Organization = provider.Organization,
@@ -263,6 +266,8 @@ namespace GitMan
 
                 menuItem.MenuItems.Clear();
                 menuItem.MenuItems.AddRange(menuItems);
+
+                Cursor.Current = originalCursor;
             }
 
             void onSelect(object sender, EventArgs eventArgs) { }
