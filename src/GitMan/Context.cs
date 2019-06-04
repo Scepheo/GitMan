@@ -1,4 +1,5 @@
-﻿using GitMan.Clients;
+﻿using GitMan.Actions;
+using GitMan.Clients;
 using GitMan.Config;
 using System;
 using System.Collections.Generic;
@@ -16,6 +17,7 @@ namespace GitMan
         private readonly NotifyIcon _icon;
         private readonly Main _main;
         private readonly Settings _settings;
+        private readonly RepositoryAction[] _repositoryActions;
 
         public Context()
         {
@@ -28,6 +30,8 @@ namespace GitMan
             _main = new Main();
 
             _settings = Settings.Load();
+
+            _repositoryActions = RepositoryActions.GetDefaults(_settings).ToArray();
         }
 
         private void Icon_DoubleClick(object sender, EventArgs e)
@@ -81,121 +85,16 @@ namespace GitMan
         private MenuItem MakeMenuItem(Repository repository)
         {
             var name = repository.Name;
+            var directoryInfo = new DirectoryInfo(repository.FullName);
 
             var subItems = new List<MenuItem>();
 
-            var folderItem = MakeFolderItem(repository);
-            subItems.Add(folderItem);
-
-            if (GitBashExists())
+            foreach (var repositoryAction in _repositoryActions)
             {
-                var gitBashItem = MakeGitBashItem(repository);
-                subItems.Add(gitBashItem);
-            }
-
-            if (repository.IsVsCodeProject() && VsCodeExists())
-            {
-                var vsCodeItem = MakeVsCodeItem(repository);
-                subItems.Add(vsCodeItem);
-            }
-
-            foreach (var solutionFile in repository.SolutionFiles)
-            {
-                var solutionItem = MakeSolutionItem(solutionFile);
-                subItems.Add(solutionItem);
+                subItems.AddRange(repositoryAction.GetMenuItems(directoryInfo));
             }
 
             var menuItem = new MenuItem(name, subItems.ToArray());
-            return menuItem;
-        }
-
-        private static MenuItem MakeSolutionItem(FileInfo solutionFile)
-        {
-            void onClick(object sender, EventArgs eventArgs)
-            {
-                var startInfo = new ProcessStartInfo
-                {
-                    FileName = solutionFile.FullName,
-                    UseShellExecute = true,
-                };
-
-                Process.Start(startInfo);
-            }
-
-            var name = $"Open {solutionFile.Name}";
-            var menuItem = new MenuItem(name, onClick);
-            return menuItem;
-        }
-
-        private bool GitBashExists()
-        {
-            var gitBashExists = File.Exists(_settings.GitBashPath);
-            return gitBashExists;
-        }
-
-        private MenuItem MakeGitBashItem(Repository repository)
-        {
-            void onClick(object sender, EventArgs eventArgs)
-            {
-                var fullName = repository.FullName;
-                var argument = $"--cd=\"{fullName}\"";
-
-                var startInfo = new ProcessStartInfo
-                {
-                    FileName = _settings.GitBashPath,
-                    Arguments = argument,
-                };
-
-                Process.Start(startInfo);
-            }
-
-            const string name = "Git bash";
-            var menuItem = new MenuItem(name, onClick);
-            return menuItem;
-        }
-
-        private static MenuItem MakeFolderItem(Repository repository)
-        {
-            void onClick(object sender, EventArgs eventArgs)
-            {
-                var startInfo = new ProcessStartInfo
-                {
-                    FileName = repository.FullName,
-                    UseShellExecute = true,
-                };
-
-                Process.Start(startInfo);
-            }
-
-            const string name = "Open folder";
-            var menuItem = new MenuItem(name, onClick);
-            return menuItem;
-        }
-
-        private bool VsCodeExists()
-        {
-            var vsCodeExists = File.Exists(_settings.VsCodePath);
-            return vsCodeExists;
-        }
-
-        private MenuItem MakeVsCodeItem(Repository repository)
-        {
-            void onClick(object sender, EventArgs eventArgs)
-            {
-                var vsCodePath = _settings.VsCodePath;
-                var fullName = repository.FullName;
-
-                var startInfo = new ProcessStartInfo
-                {
-                    FileName = vsCodePath,
-                    Arguments = fullName,
-                };
-
-                Process.Start(startInfo);
-            }
-
-            const string name = "VS Code";
-            var menuItem = new MenuItem(name, onClick);
             return menuItem;
         }
 
