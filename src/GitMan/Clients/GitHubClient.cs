@@ -66,21 +66,21 @@ namespace GitMan.Clients
             }
         }
 
-        public GitHubRepository[] GetRepositories()
+        public RemoteRepository[] GetRepositories()
         {
             var document = GetResponse("user/repos");
             var repositories = document.RootElement;
 
             var count = repositories.GetArrayLength();
-            var GitHubRepos = new GitHubRepository[count];
+            var GitHubRepos = new RemoteRepository[count];
             var index = 0;
             
             foreach (var repository in repositories.EnumerateArray())
             {
                 var name = repository.GetProperty("name").GetString();
                 var fullName = repository.GetProperty("full_name").GetString();
-                var remoteUrl = repository.GetProperty("clone_url").GetString();
-                var GitHubRepo = new GitHubRepository(name, fullName, remoteUrl);
+                var cloneUrl = repository.GetProperty("clone_url").GetString();
+                var GitHubRepo = new RemoteRepository(name, fullName, cloneUrl);
                 GitHubRepos[index] = GitHubRepo;
                 index++;
             }

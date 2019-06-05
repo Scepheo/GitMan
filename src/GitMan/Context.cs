@@ -166,7 +166,7 @@ namespace GitMan
                     .OrderBy(repository => repository.Name);
 
                 var menuItems = repositories
-                    .Select(repository => MakeAzureRepositoryItem(repository, provider))
+                    .Select(repository => MakeRemoteRepositoryItem(repository, provider.DefaultConfig))
                     .ToArray();
 
                 menuItem.MenuItems.Clear();
@@ -187,30 +187,6 @@ namespace GitMan
                 onSelect,
                 dummyItems);
 
-            return menuItem;
-        }
-
-        private MenuItem MakeAzureRepositoryItem(AzureRepository repository, AzureProvider provider)
-        {
-            var name = repository.Name;
-
-            void onClick(object sender, EventArgs eventArgs)
-            {
-                var configs = provider.DefaultConfig.Select(pair => $"--config \"{pair.Key}={pair.Value}\"");
-                var argument = $"clone \"{repository.RemoteUrl}\" {string.Join(' ', configs)}";
-
-                var startInfo = new ProcessStartInfo
-                {
-                    FileName = "git",
-                    Arguments = argument,
-                    UseShellExecute = true,
-                    WorkingDirectory = _settings.RepositoryFolder,
-                };
-
-                Process.Start(startInfo);
-            }
-
-            var menuItem = new MenuItem(name, onClick);
             return menuItem;
         }
 
@@ -248,7 +224,7 @@ namespace GitMan
                     .OrderBy(repository => repository.Name);
 
                 var menuItems = repositories
-                    .Select(repository => MakeGitHubRepositoryItem(repository, provider))
+                    .Select(repository => MakeRemoteRepositoryItem(repository, provider.DefaultConfig))
                     .ToArray();
 
                 menuItem.MenuItems.Clear();
@@ -272,14 +248,14 @@ namespace GitMan
             return menuItem;
         }
 
-        private MenuItem MakeGitHubRepositoryItem(GitHubRepository repository, GitHubProvider provider)
+        private MenuItem MakeRemoteRepositoryItem(RemoteRepository repository, Dictionary<string, string> defaultConfig)
         {
-            var name = repository.Name;
+            var name = repository.DisplayName;
 
             void onClick(object sender, EventArgs eventArgs)
             {
-                var configs = provider.DefaultConfig.Select(pair => $"--config \"{pair.Key}={pair.Value}\"");
-                var argument = $"clone \"{repository.RemoteUrl}\" {string.Join(' ', configs)}";
+                var configs = defaultConfig.Select(pair => $"--config \"{pair.Key}={pair.Value}\"");
+                var argument = $"clone \"{repository.CloneUrl}\" {string.Join(' ', configs)}";
 
                 var startInfo = new ProcessStartInfo
                 {

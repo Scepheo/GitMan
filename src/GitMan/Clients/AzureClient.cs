@@ -94,20 +94,20 @@ namespace GitMan.Clients
             }
         }
 
-        public AzureRepository[] GetRepositories()
+        public RemoteRepository[] GetRepositories()
         {
             var document = GetResponse("git/repositories");
             var repositories = document.RootElement.GetProperty("value");
 
             var count = repositories.GetArrayLength();
-            var azureRepos = new AzureRepository[count];
+            var azureRepos = new RemoteRepository[count];
             var index = 0;
             
             foreach (var repository in repositories.EnumerateArray())
             {
                 var name = repository.GetProperty("name").GetString();
-                var remoteUrl = repository.GetProperty("remoteUrl").GetString();
-                var azureRepo = new AzureRepository(name, remoteUrl);
+                var cloneUrl = repository.GetProperty("remoteUrl").GetString();
+                var azureRepo = new RemoteRepository(name, cloneUrl);
                 azureRepos[index] = azureRepo;
                 index++;
             }
