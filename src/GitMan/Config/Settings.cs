@@ -10,6 +10,7 @@ namespace GitMan.Config
         public string VsCodePath { get; set; }
         public string GitBashPath { get; set; }
         public AzureProvider[] AzureProviders { get; set; }
+        public GitHubProvider[] GitHubProviders { get; set; }
 
         private static Settings CreateDefault()
         {
@@ -18,6 +19,7 @@ namespace GitMan.Config
             var vsCodePath = Path.Combine(userProfile, "./AppData/Local/Programs/Microsoft VS Code/Code.exe");
             const string gitBashPath = "C:/Program Files/Git/git-bash.exe";
             var azureProviders = Array.Empty<AzureProvider>();
+            var gitHubProviders = Array.Empty<GitHubProvider>();
 
             var settings = new Settings
             {
@@ -25,6 +27,7 @@ namespace GitMan.Config
                 VsCodePath = vsCodePath,
                 GitBashPath = gitBashPath,
                 AzureProviders = azureProviders,
+                GitHubProviders = gitHubProviders,
             };
 
             return settings;

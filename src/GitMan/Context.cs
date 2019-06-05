@@ -119,6 +119,12 @@ namespace GitMan
                 items.Add(item);
             }
 
+            foreach (var provider in _settings.GitHubProviders)
+            {
+                var item = MakeGitHubProviderItem(existingRepositories, provider);
+                items.Add(item);
+            }
+
             const string name = "Clone";
             var itemArray = items.ToArray();
 
@@ -185,6 +191,88 @@ namespace GitMan
         }
 
         private MenuItem MakeAzureRepositoryItem(AzureRepository repository, AzureProvider provider)
+        {
+            var name = repository.Name;
+
+            void onClick(object sender, EventArgs eventArgs)
+            {
+                var configs = provider.DefaultConfig.Select(pair => $"--config \"{pair.Key}={pair.Value}\"");
+                var argument = $"clone \"{repository.RemoteUrl}\" {string.Join(' ', configs)}";
+
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = "git",
+                    Arguments = argument,
+                    UseShellExecute = true,
+                    WorkingDirectory = _settings.RepositoryFolder,
+                };
+
+                Process.Start(startInfo);
+            }
+
+            var menuItem = new MenuItem(name, onClick);
+            return menuItem;
+        }
+
+        private MenuItem MakeGitHubProviderItem(
+            RepositoryList existingRepositories,
+            GitHubProvider provider)
+        {
+            var loadItem = new MenuItem("Loading...");
+            var dummyItems = new[] { loadItem };
+
+            MenuItem menuItem = default;
+
+            var name = $"{provider.Username}";
+            var mergeType = MenuMerge.Add;
+            var mergeOrder = 0;
+            var shortcut = Shortcut.None;
+
+            void onClick(object sender, EventArgs eventArgs) { }
+
+            void onPopup(object sender, EventArgs eventArgs)
+            {
+                var originalCursor = Cursor.Current;
+                Cursor.Current = Cursors.WaitCursor;
+
+                var clientConfig = new GitHubClientConfig
+                {
+                    Username = provider.Username,
+                    PersonalAccessToken = provider.PersonalAccessToken,
+                };
+
+                var client = new GitHubClient(clientConfig);
+
+                var repositories = client.GetRepositories()
+                    .Where(repository => !existingRepositories.Any(existing => existing.Name == repository.Name))
+                    .OrderBy(repository => repository.Name);
+
+                var menuItems = repositories
+                    .Select(repository => MakeGitHubRepositoryItem(repository, provider))
+                    .ToArray();
+
+                menuItem.MenuItems.Clear();
+                menuItem.MenuItems.AddRange(menuItems);
+
+                Cursor.Current = originalCursor;
+            }
+
+            void onSelect(object sender, EventArgs eventArgs) { }
+
+            menuItem = new MenuItem(
+                mergeType,
+                mergeOrder,
+                shortcut,
+                name,
+                onClick,
+                onPopup,
+                onSelect,
+                dummyItems);
+
+            return menuItem;
+        }
+
+        private MenuItem MakeGitHubRepositoryItem(GitHubRepository repository, GitHubProvider provider)
         {
             var name = repository.Name;
 
