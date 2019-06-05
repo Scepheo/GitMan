@@ -2,9 +2,10 @@
 
 namespace GitMan.Config
 {
-    internal class GitHubProvider
+    internal class AzureProviderSettings
     {
-        public string Username { get; set; }
+        public string Organization { get; set; }
+        public string Project { get; set; }
         public string PersonalAccessToken { get; set; }
         public Dictionary<string, string> DefaultConfig { get; set; } = new Dictionary<string, string>();
     }

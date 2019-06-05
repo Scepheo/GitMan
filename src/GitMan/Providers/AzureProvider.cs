@@ -1,21 +1,28 @@
-﻿using System;
+﻿using GitMan.Config;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace GitMan.Clients
 {
-    internal class AzureClient
+    internal class AzureProvider : RemoteProvider
     {
-        private readonly AzureClientConfig _config;
+        private readonly string _organization;
+        private readonly string _project;
+        private readonly string _personalAccessToken;
 
-        public AzureClient(AzureClientConfig config)
+        public AzureProvider(AzureProviderSettings settings)
+            : base(
+                  $"{settings.Organization} - {settings.Project}",
+                  settings.DefaultConfig)
         {
-            _config = config;
+            _organization = settings.Organization;
+            _project = settings.Project;
+            _personalAccessToken = settings.PersonalAccessToken;
         }
 
         private HttpClient GetClient()
@@ -25,7 +32,7 @@ namespace GitMan.Clients
             var acceptHeader = new MediaTypeWithQualityHeaderValue("application/json");
             client.DefaultRequestHeaders.Accept.Add(acceptHeader);
 
-            var patBytes = Encoding.ASCII.GetBytes(":" + _config.PersonalAccessToken);
+            var patBytes = Encoding.ASCII.GetBytes(":" + _personalAccessToken);
             var authParameter = Convert.ToBase64String(patBytes);
             var authHeader = new AuthenticationHeaderValue("Basic", authParameter);
             client.DefaultRequestHeaders.Authorization = authHeader;
@@ -59,8 +66,8 @@ namespace GitMan.Clients
 
         private Uri BuildUri(string path, Dictionary<string, string> queryParams)
         {
-            var organization = Uri.EscapeUriString(_config.Organization);
-            var project = Uri.EscapeUriString(_config.Project);
+            var organization = Uri.EscapeUriString(_organization);
+            var project = Uri.EscapeUriString(_project);
             var fullPath = $"{organization}/{project}/_apis/{path}";
 
             queryParams["api-version"] = "5.0";
@@ -90,7 +97,7 @@ namespace GitMan.Clients
             return document;
         }
 
-        public RemoteRepository[] GetRepositories()
+        public override RemoteRepository[] GetRepositories()
         {
             var document = GetResponse("git/repositories");
             var repositories = document.RootElement.GetProperty("value");

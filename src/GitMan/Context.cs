@@ -3,7 +3,6 @@ using GitMan.Clients;
 using GitMan.Config;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -18,6 +17,7 @@ namespace GitMan
         private readonly Main _main;
         private readonly Settings _settings;
         private readonly RepositoryAction[] _repositoryActions;
+        private readonly RemoteProvider[] _remoteProviders;
 
         private static void EmptyHandler(object sender, EventArgs eventArgs) { }
 
@@ -34,6 +34,12 @@ namespace GitMan
             _settings = Settings.Load();
 
             _repositoryActions = RepositoryActions.GetDefaults(_settings).ToArray();
+
+            var azureProviders = _settings.AzureProviders
+                .Select(provider => (RemoteProvider)new AzureProvider(provider));
+            var gitHubProviders = _settings.GitHubProviders
+                .Select(provider => (RemoteProvider)new GitHubProvider(provider));
+            _remoteProviders = azureProviders.Concat(gitHubProviders).ToArray();
         }
 
         private void Icon_DoubleClick(object sender, EventArgs e)
@@ -115,15 +121,12 @@ namespace GitMan
         {
             var items = new List<MenuItem>();
 
-            foreach (var provider in _settings.AzureProviders)
+            foreach (var provider in _remoteProviders)
             {
-                var item = MakeAzureProviderItem(existingRepositories, provider);
-                items.Add(item);
-            }
+                var item = provider.MakeRemoteProviderItem(
+                    _settings.RepositoryFolder,
+                    existingRepositories);
 
-            foreach (var provider in _settings.GitHubProviders)
-            {
-                var item = MakeGitHubProviderItem(existingRepositories, provider);
                 items.Add(item);
             }
 
@@ -131,139 +134,6 @@ namespace GitMan
             var itemArray = items.ToArray();
 
             return new MenuItem(name, itemArray);
-        }
-
-        private MenuItem MakeAzureProviderItem(
-            RepositoryList existingRepositories,
-            AzureProvider provider)
-        {
-            var loadItem = new MenuItem("Loading...");
-            var dummyItems = new[] { loadItem };
-
-            MenuItem menuItem = default;
-
-            var name = $"{provider.Organization} - {provider.Project}";
-            var mergeType = MenuMerge.Add;
-            var mergeOrder = 0;
-            var shortcut = Shortcut.None;
-
-            void onPopup(object sender, EventArgs eventArgs)
-            {
-                var originalCursor = Cursor.Current;
-                Cursor.Current = Cursors.WaitCursor;
-
-                var clientConfig = new AzureClientConfig
-                {
-                    Organization = provider.Organization,
-                    Project = provider.Project,
-                    PersonalAccessToken = provider.PersonalAccessToken,
-                };
-
-                var client = new AzureClient(clientConfig);
-
-                var repositories = client.GetRepositories()
-                    .Where(repository => !existingRepositories.Any(existing => existing.Name == repository.Name))
-                    .OrderBy(repository => repository.Name);
-
-                var menuItems = repositories
-                    .Select(repository => MakeRemoteRepositoryItem(repository, provider.DefaultConfig))
-                    .ToArray();
-
-                menuItem.MenuItems.Clear();
-                menuItem.MenuItems.AddRange(menuItems);
-
-                Cursor.Current = originalCursor;
-            }
-
-            menuItem = new MenuItem(
-                mergeType,
-                mergeOrder,
-                shortcut,
-                name,
-                EmptyHandler,
-                onPopup,
-                EmptyHandler,
-                dummyItems);
-
-            return menuItem;
-        }
-
-        private MenuItem MakeGitHubProviderItem(
-            RepositoryList existingRepositories,
-            GitHubProvider provider)
-        {
-            var loadItem = new MenuItem("Loading...");
-            var dummyItems = new[] { loadItem };
-
-            MenuItem menuItem = default;
-
-            var name = $"{provider.Username}";
-            var mergeType = MenuMerge.Add;
-            var mergeOrder = 0;
-            var shortcut = Shortcut.None;
-
-            void onPopup(object sender, EventArgs eventArgs)
-            {
-                var originalCursor = Cursor.Current;
-                Cursor.Current = Cursors.WaitCursor;
-
-                var clientConfig = new GitHubClientConfig
-                {
-                    Username = provider.Username,
-                    PersonalAccessToken = provider.PersonalAccessToken,
-                };
-
-                var client = new GitHubClient(clientConfig);
-
-                var repositories = client.GetRepositories()
-                    .Where(repository => !existingRepositories.Any(existing => existing.Name == repository.Name))
-                    .OrderBy(repository => repository.Name);
-
-                var menuItems = repositories
-                    .Select(repository => MakeRemoteRepositoryItem(repository, provider.DefaultConfig))
-                    .ToArray();
-
-                menuItem.MenuItems.Clear();
-                menuItem.MenuItems.AddRange(menuItems);
-
-                Cursor.Current = originalCursor;
-            }
-
-            menuItem = new MenuItem(
-                mergeType,
-                mergeOrder,
-                shortcut,
-                name,
-                EmptyHandler,
-                onPopup,
-                EmptyHandler,
-                dummyItems);
-
-            return menuItem;
-        }
-
-        private MenuItem MakeRemoteRepositoryItem(RemoteRepository repository, Dictionary<string, string> defaultConfig)
-        {
-            var name = repository.DisplayName;
-
-            void onClick(object sender, EventArgs eventArgs)
-            {
-                var configs = defaultConfig.Select(pair => $"--config \"{pair.Key}={pair.Value}\"");
-                var argument = $"clone \"{repository.CloneUrl}\" {string.Join(' ', configs)}";
-
-                var startInfo = new ProcessStartInfo
-                {
-                    FileName = "git",
-                    Arguments = argument,
-                    UseShellExecute = true,
-                    WorkingDirectory = _settings.RepositoryFolder,
-                };
-
-                Process.Start(startInfo);
-            }
-
-            var menuItem = new MenuItem(name, onClick);
-            return menuItem;
         }
     }
 }

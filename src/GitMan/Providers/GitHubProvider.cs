@@ -1,4 +1,5 @@
-﻿using System;
+﻿using GitMan.Config;
+using System;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reflection;
@@ -7,13 +8,18 @@ using System.Text.Json;
 
 namespace GitMan.Clients
 {
-    internal class GitHubClient
+    internal class GitHubProvider : RemoteProvider
     {
-        private readonly GitHubClientConfig _config;
+        private readonly string _username;
+        private readonly string _personalAccessToken;
 
-        public GitHubClient(GitHubClientConfig config)
+        public GitHubProvider(GitHubProviderSettings settings)
+            : base(
+                  $"GitHub - {settings.Username}",
+                  settings.DefaultConfig)
         {
-            _config = config;
+            _username = settings.Username;
+            _personalAccessToken = settings.PersonalAccessToken;
         }
 
         private HttpClient GetClient()
@@ -27,7 +33,7 @@ namespace GitMan.Clients
             var userAgentHeader = new ProductInfoHeaderValue(assemblyName.Name, assemblyName.Version.ToString());
             client.DefaultRequestHeaders.UserAgent.Add(userAgentHeader);
 
-            var patBytes = Encoding.ASCII.GetBytes(_config.Username + ":" + _config.PersonalAccessToken);
+            var patBytes = Encoding.ASCII.GetBytes(_username + ":" + _personalAccessToken);
             var authParameter = Convert.ToBase64String(patBytes);
             var authHeader = new AuthenticationHeaderValue("Basic", authParameter);
             client.DefaultRequestHeaders.Authorization = authHeader;
@@ -62,7 +68,7 @@ namespace GitMan.Clients
             return document;
         }
 
-        public RemoteRepository[] GetRepositories()
+        public override RemoteRepository[] GetRepositories()
         {
             var document = GetResponse("user/repos");
             var repositories = document.RootElement;
