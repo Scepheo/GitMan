@@ -13,14 +13,15 @@ steps:
     includePreviewVersions: true
 
 - task: DotNetCoreCLI@2
-  displayName: 'Build solution'
+  displayName: 'DotNet publish'
   inputs:
-    command: build
-    projects: '**/*.csproj'
+    command: publish
+    projects: 'src/GitMan/GitMan.csproj'
     arguments: '--configuration Release --output $(Build.ArtifactStagingDirectory)'
+    publishWebProjects: false
 
 - task: PublishBuildArtifacts@1
   displayName: 'Publish build artifacts'
   inputs:
-    pathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    pathToPublish: '$(Build.ArtifactStagingDirectory)'
     artifactName: 'GitMan'
