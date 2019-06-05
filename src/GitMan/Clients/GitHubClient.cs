@@ -55,15 +55,11 @@ namespace GitMan.Clients
         {
             var uri = BuildUri(path);
 
-            using (var client = GetClient())
-            {
-                using (var response = client.GetAsync(uri).Result)
-                {
-                    var json = response.Content.ReadAsStringAsync().Result;
-                    var document = JsonDocument.Parse(json);
-                    return document;
-                }
-            }
+            using var client = GetClient();
+            using var response = client.GetAsync(uri).Result;
+            var json = response.Content.ReadAsStringAsync().Result;
+            var document = JsonDocument.Parse(json);
+            return document;
         }
 
         public RemoteRepository[] GetRepositories()

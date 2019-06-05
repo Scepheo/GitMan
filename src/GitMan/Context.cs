@@ -19,6 +19,8 @@ namespace GitMan
         private readonly Settings _settings;
         private readonly RepositoryAction[] _repositoryActions;
 
+        private static void EmptyHandler(object sender, EventArgs eventArgs) { }
+
         public Context()
         {
             _icon = new NotifyIcon();
@@ -145,8 +147,6 @@ namespace GitMan
             var mergeOrder = 0;
             var shortcut = Shortcut.None;
 
-            void onClick(object sender, EventArgs eventArgs) { }
-
             void onPopup(object sender, EventArgs eventArgs)
             {
                 var originalCursor = Cursor.Current;
@@ -175,16 +175,14 @@ namespace GitMan
                 Cursor.Current = originalCursor;
             }
 
-            void onSelect(object sender, EventArgs eventArgs) { }
-
             menuItem = new MenuItem(
                 mergeType,
                 mergeOrder,
                 shortcut,
                 name,
-                onClick,
+                EmptyHandler,
                 onPopup,
-                onSelect,
+                EmptyHandler,
                 dummyItems);
 
             return menuItem;
@@ -203,8 +201,6 @@ namespace GitMan
             var mergeType = MenuMerge.Add;
             var mergeOrder = 0;
             var shortcut = Shortcut.None;
-
-            void onClick(object sender, EventArgs eventArgs) { }
 
             void onPopup(object sender, EventArgs eventArgs)
             {
@@ -233,16 +229,14 @@ namespace GitMan
                 Cursor.Current = originalCursor;
             }
 
-            void onSelect(object sender, EventArgs eventArgs) { }
-
             menuItem = new MenuItem(
                 mergeType,
                 mergeOrder,
                 shortcut,
                 name,
-                onClick,
+                EmptyHandler,
                 onPopup,
-                onSelect,
+                EmptyHandler,
                 dummyItems);
 
             return menuItem;
