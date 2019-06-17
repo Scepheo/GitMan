@@ -48,6 +48,9 @@ namespace GitMan.Config
                 settings.Save();
             }
 
+            settings.AzureProviders ??= Array.Empty<AzureProviderSettings>();
+            settings.GitHubProviders ??= Array.Empty<GitHubProviderSettings>();
+
             return settings;
         }
 

@@ -18,17 +18,12 @@ namespace GitMan
         private readonly Settings _settings;
         private readonly RepositoryAction[] _repositoryActions;
         private readonly RemoteProvider[] _remoteProviders;
+        private readonly RepositoryDirectory _repositoryDirectory;
 
         private static void EmptyHandler(object sender, EventArgs eventArgs) { }
 
         public Context()
         {
-            _icon = new NotifyIcon();
-            _icon.DoubleClick += Icon_DoubleClick;
-            _icon.MouseDown += Icon_MouseDown;
-            _icon.Visible = true;
-            _icon.Icon = LoadIcon();
-
             _main = new Main();
 
             _settings = Settings.Load();
@@ -40,6 +35,51 @@ namespace GitMan
             var gitHubProviders = _settings.GitHubProviders
                 .Select(provider => (RemoteProvider)new GitHubProvider(provider));
             _remoteProviders = azureProviders.Concat(gitHubProviders).ToArray();
+
+            var directoryInfo = new DirectoryInfo(_settings.RepositoryFolder);
+            _repositoryDirectory = new RepositoryDirectory(directoryInfo);
+            _repositoryDirectory.Added += RepositoryAdded;
+            _repositoryDirectory.Removed += RepositoryRemoved;
+            _repositoryDirectory.Renamed += RepositoryRenamed;
+
+            _icon = new NotifyIcon();
+            _icon.DoubleClick += Icon_DoubleClick;
+            _icon.Visible = true;
+            _icon.Icon = LoadIcon();
+            _icon.ContextMenu = MakeContextMenu();
+        }
+
+        private void InsertMenuItem(MenuItem menuItem)
+        {
+            var menuItems = _icon.ContextMenu.MenuItems;
+
+            var currentItems = menuItems.Cast<MenuItem>();
+            var newItems = Enumerable.Repeat(menuItem, 1);
+            var allitems = currentItems.Concat(newItems);
+            var orderedItems = allitems.OrderBy(item => item.Name).ToArray();
+
+            menuItems.Clear();
+            menuItems.AddRange(orderedItems);
+        }
+
+        private void RepositoryAdded(Repository repository)
+        {
+            var menuItem = MakeMenuItem(repository);
+            InsertMenuItem(menuItem);
+        }
+
+        private void RepositoryRemoved(Repository repository)
+        {
+            var currentItems = _icon.ContextMenu.MenuItems.Cast<MenuItem>();
+            var name = GetRepositoryItemName(repository);
+            var menuItem = currentItems.Single(item => item.Name == name);
+            _icon.ContextMenu.MenuItems.Remove(menuItem);
+        }
+
+        private void RepositoryRenamed(Repository oldRepository, Repository newRepository)
+        {
+            RepositoryRemoved(oldRepository);
+            RepositoryAdded(newRepository);
         }
 
         private void Icon_DoubleClick(object sender, EventArgs e)
@@ -62,25 +102,21 @@ namespace GitMan
             return new Icon(resourceStream);
         }
 
-        private void Icon_MouseDown(object sender, MouseEventArgs e)
+        private ContextMenu MakeContextMenu()
         {
-            var directory = new DirectoryInfo(_settings.RepositoryFolder);
-            var repositoryList = RepositoryList.Load(directory);
-
             var items = new List<MenuItem>();
 
-            var cloneItem = MakeCloneItem(repositoryList);
+            var cloneItem = MakeCloneItem(_repositoryDirectory);
             items.Add(cloneItem);
 
-            var repositoryItems = repositoryList.Select(MakeMenuItem).ToArray();
+            var repositoryItems = _repositoryDirectory.Select(MakeMenuItem).ToArray();
             items.AddRange(repositoryItems);
 
             var exitItem = MakeExitItem();
             items.Add(exitItem);
 
             var menu = new ContextMenu(items.ToArray());
-
-            _icon.ContextMenu = menu;
+            return menu;
         }
 
         protected override void Dispose(bool disposing)
@@ -88,6 +124,11 @@ namespace GitMan
             base.Dispose(disposing);
             _icon.Visible = false;
             _icon.Dispose();
+        }
+
+        private string GetRepositoryItemName(Repository repository)
+        {
+            return $"2_REPO_{repository.Name}";
         }
 
         private MenuItem MakeMenuItem(Repository repository)
@@ -102,7 +143,11 @@ namespace GitMan
                 subItems.AddRange(repositoryAction.GetMenuItems(directoryInfo));
             }
 
-            var menuItem = new MenuItem(name, subItems.ToArray());
+            var menuItem = new MenuItem(name, subItems.ToArray())
+            {
+                Name = GetRepositoryItemName(repository)
+            };
+
             return menuItem;
         }
 
@@ -114,10 +159,10 @@ namespace GitMan
             }
 
             const string name = "Exit";
-            return new MenuItem(name, onClick);
+            return new MenuItem(name, onClick) { Name = "3_EXIT" };
         }
 
-        private MenuItem MakeCloneItem(RepositoryList existingRepositories)
+        private MenuItem MakeCloneItem(RepositoryDirectory existingRepositories)
         {
             var items = new List<MenuItem>();
 
@@ -133,7 +178,7 @@ namespace GitMan
             const string name = "Clone";
             var itemArray = items.ToArray();
 
-            return new MenuItem(name, itemArray);
+            return new MenuItem(name, itemArray) { Name = "1_CLONE" };
         }
     }
 }

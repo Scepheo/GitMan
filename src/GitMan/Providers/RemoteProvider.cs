@@ -20,7 +20,7 @@ namespace GitMan.Clients
 
         public MenuItem MakeRemoteProviderItem(
             string repositoryFolder,
-            RepositoryList existingRepositories)
+            RepositoryDirectory existingRepositories)
         {
             var loadItem = new MenuItem("Loading...");
             var dummyItems = new[] { loadItem };
