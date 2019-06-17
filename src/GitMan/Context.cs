@@ -1,5 +1,5 @@
 ﻿using GitMan.Actions;
-using GitMan.Clients;
+using GitMan.Providers;
 using GitMan.Config;
 using System;
 using System.Collections.Generic;

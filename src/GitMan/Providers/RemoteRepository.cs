@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Windows.Forms;
 
-namespace GitMan.Clients
+namespace GitMan.Providers
 {
     internal class RemoteRepository
     {

@@ -7,7 +7,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 
-namespace GitMan.Clients
+namespace GitMan.Providers
 {
     internal class AzureProvider : RemoteProvider
     {
@@ -94,7 +94,20 @@ namespace GitMan.Clients
             using var response = client.GetAsync(uri).Result;
             var json = response.Content.ReadAsStringAsync().Result;
             var document = JsonDocument.Parse(json);
-            return document;
+
+            if (response.IsSuccessStatusCode)
+            {
+                return document;
+            }
+            else
+            {
+                var statusCode = response.StatusCode;
+                var message = document.RootElement.TryGetProperty("message", out var messageProperty)
+                    ? messageProperty.GetString()
+                    : "An unknown error occurred";
+                var exception = new RemoteProviderException(statusCode, message);
+                throw exception;
+            }
         }
 
         public override RemoteRepository[] GetRepositories()
@@ -105,7 +118,7 @@ namespace GitMan.Clients
             var count = repositories.GetArrayLength();
             var azureRepos = new RemoteRepository[count];
             var index = 0;
-            
+
             foreach (var repository in repositories.EnumerateArray())
             {
                 var name = repository.GetProperty("name").GetString();

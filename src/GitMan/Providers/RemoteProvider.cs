@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
 
-namespace GitMan.Clients
+namespace GitMan.Providers
 {
     internal abstract class RemoteProvider
     {
@@ -22,8 +22,10 @@ namespace GitMan.Clients
             string repositoryFolder,
             RepositoryDirectory existingRepositories)
         {
-            var loadItem = new MenuItem("Loading...");
-            var dummyItems = new[] { loadItem };
+            // This _should_ never be shown to the user, and is only here to
+            // ensure the little drop-down arrow shows up
+            var dummyItem = new MenuItem("<DUMMY>");
+            var dummyItems = new[] { dummyItem };
 
             MenuItem menuItem = default;
 
@@ -36,18 +38,44 @@ namespace GitMan.Clients
                 var originalCursor = Cursor.Current;
                 Cursor.Current = Cursors.WaitCursor;
 
-                var repositories = GetRepositories()
-                    .Where(repository => !existingRepositories.Any(existing => existing.Name == repository.Name))
-                    .OrderBy(repository => repository.Name);
+                var trying = true;
 
-                var menuItems = repositories
-                    .Select(repository => repository.GetMenuItem(
-                        repositoryFolder,
-                        DefaultConfig))
-                    .ToArray();
+                while (trying)
+                {
+                    try
+                    {
+                        var repositories = GetRepositories()
+                            .Where(repository => !existingRepositories.Any(existing => existing.Name == repository.Name))
+                            .OrderBy(repository => repository.Name);
 
-                menuItem.MenuItems.Clear();
-                menuItem.MenuItems.AddRange(menuItems);
+                        var menuItems = repositories
+                            .Select(repository => repository.GetMenuItem(
+                                repositoryFolder,
+                                DefaultConfig))
+                            .ToArray();
+
+                        menuItem.MenuItems.Clear();
+                        menuItem.MenuItems.AddRange(menuItems);
+                    }
+                    catch (Exception exception)
+                    {
+                        var text = exception.Message;
+                        const string caption = "An error occurred";
+                        var buttons = MessageBoxButtons.RetryCancel;
+                        var icon = MessageBoxIcon.Error;
+
+                        var response = MessageBox.Show(text, caption, buttons, icon);
+
+                        if (response == DialogResult.Retry)
+                        {
+                            continue;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                }
 
                 Cursor.Current = originalCursor;
             }
