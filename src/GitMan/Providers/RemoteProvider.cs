@@ -38,9 +38,7 @@ namespace GitMan.Providers
                 var originalCursor = Cursor.Current;
                 Cursor.Current = Cursors.WaitCursor;
 
-                var trying = true;
-
-                while (trying)
+                while (true)
                 {
                     try
                     {
@@ -56,6 +54,7 @@ namespace GitMan.Providers
 
                         menuItem.MenuItems.Clear();
                         menuItem.MenuItems.AddRange(menuItems);
+                        break;
                     }
                     catch (Exception exception)
                     {
