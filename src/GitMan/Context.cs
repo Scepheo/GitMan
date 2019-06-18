@@ -1,6 +1,6 @@
 ﻿using GitMan.Actions;
-using GitMan.Providers;
 using GitMan.Config;
+using GitMan.Providers;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -16,7 +16,6 @@ namespace GitMan
         private readonly NotifyIcon _icon;
         private readonly Main _main;
         private readonly Settings _settings;
-        private readonly RepositoryAction[] _repositoryActions;
         private readonly RemoteProvider[] _remoteProviders;
         private readonly RepositoryDirectory _repositoryDirectory;
 
@@ -27,8 +26,6 @@ namespace GitMan
             _main = new Main();
 
             _settings = Settings.Load();
-
-            _repositoryActions = RepositoryActions.GetDefaults(_settings).ToArray();
 
             var azureProviders = _settings.AzureProviders
                 .Select(provider => (RemoteProvider)new AzureProvider(provider));
@@ -137,8 +134,9 @@ namespace GitMan
             var directoryInfo = new DirectoryInfo(repository.FullName);
 
             var subItems = new List<MenuItem>();
+            var actions = _settings.Actions.Select(settings => new RepositoryAction(settings));
 
-            foreach (var repositoryAction in _repositoryActions)
+            foreach (var repositoryAction in actions)
             {
                 subItems.AddRange(repositoryAction.GetMenuItems(directoryInfo));
             }

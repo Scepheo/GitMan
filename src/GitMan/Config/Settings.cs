@@ -11,23 +11,24 @@ namespace GitMan.Config
         public string GitBashPath { get; set; }
         public AzureProviderSettings[] AzureProviders { get; set; }
         public GitHubProviderSettings[] GitHubProviders { get; set; }
+        public ActionSettings[] Actions { get; set; }
 
         private static Settings CreateDefault()
         {
             var userProfile = Environment.GetEnvironmentVariable("USERPROFILE");
-            var repositoryFolder = Path.Combine(userProfile, "./Source/Repos");
-            var vsCodePath = Path.Combine(userProfile, "./AppData/Local/Programs/Microsoft VS Code/Code.exe");
-            const string gitBashPath = "C:/Program Files/Git/git-bash.exe";
+            var repositoryFolder = Path.Combine(userProfile, "Source\\Repos");
+
+            var actions = DefaultActions.Get();
+
             var azureProviders = Array.Empty<AzureProviderSettings>();
             var gitHubProviders = Array.Empty<GitHubProviderSettings>();
 
             var settings = new Settings
             {
                 RepositoryFolder = repositoryFolder,
-                VsCodePath = vsCodePath,
-                GitBashPath = gitBashPath,
                 AzureProviders = azureProviders,
                 GitHubProviders = gitHubProviders,
+                Actions = actions,
             };
 
             return settings;
@@ -50,6 +51,7 @@ namespace GitMan.Config
 
             settings.AzureProviders ??= Array.Empty<AzureProviderSettings>();
             settings.GitHubProviders ??= Array.Empty<GitHubProviderSettings>();
+            settings.Actions ??= Array.Empty<ActionSettings>();
 
             return settings;
         }
@@ -58,10 +60,11 @@ namespace GitMan.Config
         {
             var options = new JsonSerializerOptions
             {
+                IgnoreNullValues = true,
                 WriteIndented = true,
             };
 
-            var json = JsonSerializer.ToString(this, options);
+            var json = JsonSerializer.ToString( this, options);
             File.WriteAllText("config.json", json);
         }
     }
