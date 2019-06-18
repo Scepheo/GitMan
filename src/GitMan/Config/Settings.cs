@@ -1,6 +1,6 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.IO;
+using System.Text.Json.Serialization;
 
 namespace GitMan.Config
 {
@@ -40,7 +40,7 @@ namespace GitMan.Config
             if (File.Exists("config.json"))
             {
                 var json = File.ReadAllText("config.json");
-                settings = JsonConvert.DeserializeObject<Settings>(json);
+                settings = JsonSerializer.Parse<Settings>(json);
             }
             else
             {
@@ -56,7 +56,12 @@ namespace GitMan.Config
 
         public void Save()
         {
-            var json = JsonConvert.SerializeObject(this);
+            var options = new JsonSerializerOptions
+            {
+                WriteIndented = true,
+            };
+
+            var json = JsonSerializer.ToString(this, options);
             File.WriteAllText("config.json", json);
         }
     }
