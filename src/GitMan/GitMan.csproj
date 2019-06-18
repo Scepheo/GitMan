@@ -5,7 +5,6 @@
     <TargetFramework>netcoreapp3.0</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon>Resources\TrayIcon.ico</ApplicationIcon>
-    <StartupObject />
   </PropertyGroup>
 
   <ItemGroup>
