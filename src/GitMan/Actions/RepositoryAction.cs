@@ -1,4 +1,5 @@
-﻿using System;
+﻿using GitMan.Config;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -9,10 +10,29 @@ namespace GitMan.Actions
 {
     internal class RepositoryAction
     {
-        public bool UseShellExecute { get; set; }
-        public string NameTemplate { get; set; }
-        public string CommandTemplate { get; set; }
-        public string SearchFilter { get; set; }
+        private readonly bool _useShellExecute;
+        private readonly string _nameTemplate;
+        private readonly string _commandTemplate;
+        private readonly string _searchFilter;
+
+        public RepositoryAction(ActionSettings settings)
+        {
+            _useShellExecute = settings.Shell.GetValueOrDefault(false);
+            _nameTemplate = settings.Name;
+            _commandTemplate = GetCommand(settings.Program, settings.Args);
+            _searchFilter = settings.SearchFilter;
+        }
+
+        private static string GetCommand(string program, string[] args)
+        {
+            program ??= string.Empty;
+            args ??= Array.Empty<string>();
+
+            var items = Enumerable.Repeat(program, 1).Concat(args);
+            var quoted = items.Select(item => $"\"{item}\"");
+            var command = string.Join(' ', quoted);
+            return command;
+        }
 
         public IEnumerable<MenuItem> GetMenuItems(DirectoryInfo directoryInfo)
         {
@@ -21,7 +41,7 @@ namespace GitMan.Actions
 
         private IEnumerable<FileSystemInfo> EnumerateMatches(DirectoryInfo directoryInfo)
         {
-            return directoryInfo.EnumerateFileSystemInfos(SearchFilter, SearchOption.AllDirectories);
+            return directoryInfo.EnumerateFileSystemInfos(_searchFilter, SearchOption.AllDirectories);
         }
 
         private static string Substitute(string value, FileSystemInfo info)
@@ -39,18 +59,18 @@ namespace GitMan.Actions
 
         private string GetName(FileSystemInfo fileSystemInfo)
         {
-            var name = Substitute(NameTemplate, fileSystemInfo);
+            var name = Substitute(_nameTemplate, fileSystemInfo);
             return  name;
         }
 
         private ProcessStartInfo GetProcessStartInfo(FileSystemInfo fileSystemInfo)
         {
-            var command = Substitute(CommandTemplate, fileSystemInfo);
+            var command = Substitute(_commandTemplate, fileSystemInfo);
 
             var startInfo = new ProcessStartInfo
             {
                 FileName = command,
-                UseShellExecute = UseShellExecute,
+                UseShellExecute = _useShellExecute,
             };
 
             return startInfo;
