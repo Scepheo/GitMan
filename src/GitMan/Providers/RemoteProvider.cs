@@ -10,10 +10,10 @@ namespace GitMan.Providers
         public string Name { get; }
         public Dictionary<string, string> DefaultConfig { get; }
 
-        public RemoteProvider(string name, Dictionary<string, string> defaultConfig)
+        public RemoteProvider(string name, Dictionary<string, string>? defaultConfig)
         {
             Name = name;
-            DefaultConfig = defaultConfig;
+            DefaultConfig = defaultConfig ?? new Dictionary<string, string>();
         }
 
         public abstract RemoteRepository[] GetRepositories();
@@ -27,11 +27,7 @@ namespace GitMan.Providers
             var dummyItem = new MenuItem("<DUMMY>");
             var dummyItems = new[] { dummyItem };
 
-            MenuItem menuItem = default;
-
-            var mergeType = MenuMerge.Add;
-            var mergeOrder = 0;
-            var shortcut = Shortcut.None;
+            MenuItem menuItem;
 
             void onPopup(object sender, EventArgs eventArgs)
             {
@@ -79,16 +75,8 @@ namespace GitMan.Providers
                 Cursor.Current = originalCursor;
             }
 
-            menuItem = new MenuItem(
-                mergeType,
-                mergeOrder,
-                shortcut,
-                Name,
-                delegate { },
-                onPopup,
-                delegate { },
-                dummyItems);
-
+            menuItem = new MenuItem(Name, dummyItems);
+            menuItem.Popup += onPopup;
             return menuItem;
         }
     }

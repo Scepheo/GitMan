@@ -6,12 +6,10 @@ namespace GitMan.Config
 {
     internal class Settings
     {
-        public string RepositoryFolder { get; set; }
-        public string VsCodePath { get; set; }
-        public string GitBashPath { get; set; }
-        public AzureProviderSettings[] AzureProviders { get; set; }
-        public GitHubProviderSettings[] GitHubProviders { get; set; }
-        public ActionSettings[] Actions { get; set; }
+        public string? RepositoryFolder { get; set; }
+        public AzureProviderSettings[]? AzureProviders { get; set; }
+        public GitHubProviderSettings[]? GitHubProviders { get; set; }
+        public ActionSettings[]? Actions { get; set; }
 
         private static Settings CreateDefault()
         {

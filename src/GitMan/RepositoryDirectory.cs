@@ -1,8 +1,11 @@
-﻿using System;
+﻿using GitMan.Utility;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+
+using static GitMan.Utility.Option<GitMan.Repository>;
 
 namespace GitMan
 {
@@ -11,6 +14,8 @@ namespace GitMan
         private readonly DirectoryInfo _directoryInfo;
         private readonly Dictionary<string, Repository> _repositories;
         private readonly FileSystemWatcher _watcher;
+
+        public string Path => _directoryInfo.FullName;
 
         public RepositoryDirectory(DirectoryInfo directoryInfo)
         {
@@ -57,65 +62,53 @@ namespace GitMan
             HandleChange(oldName, newName);
         }
 
-        private bool TryGetDirectory(string name, out DirectoryInfo directory)
+        private Option<DirectoryInfo> GetDirectory(string name)
         {
-            directory = _directoryInfo.EnumerateDirectories().SingleOrDefault(dir => dir.Name == name);
-            return directory != default;
+            var directoryInfo = _directoryInfo
+                .EnumerateDirectories()
+                .OptionSingle(dir => dir.Name == name);
+
+            return directoryInfo;
         }
 
-        private bool WasRepository(string directoryName, out Repository repository)
+        private Option<Repository> GetOldRepository(string directoryName)
         {
-            if (directoryName == null)
-            {
-                repository = null;
-                return false;
-            }
-
-            return _repositories.TryGetValue(directoryName, out repository);
+            var oldRepository = _repositories.OptionGet(directoryName);
+            return oldRepository;
         }
 
-        private bool IsRepository(string directoryName, out Repository repository)
+        private Option<Repository> GetNewRepository(string directoryName)
         {
-            if (!TryGetDirectory(directoryName, out var directory))
-            {
-                repository = null;
-                return false;
-            }
-
-            if (IsGitRepository(directory))
-            {
-                repository = Repository.Load(directory);
-                return true;
-            }
-
-            repository = null;
-            return false;
+            var directory = GetDirectory(directoryName);
+            var repositoryDirectory = directory.If(IsGitRepository);
+            var repository = repositoryDirectory.Map(Repository.Load);
+            return repository;
         }
 
         private void HandleChange(string oldDirectoryName, string newDirectoryName)
         {
-            var wasRepository = WasRepository(oldDirectoryName, out var oldRepository);
-            var isRepository = IsRepository(newDirectoryName, out var newRepository);
+            var oldRepository = GetOldRepository(oldDirectoryName);
+            var newRepository = GetNewRepository(newDirectoryName);
             var isNameChanged = !string.Equals(oldDirectoryName, newDirectoryName, StringComparison.OrdinalIgnoreCase);
 
-            if (wasRepository && isRepository)
+            switch (oldRepository, newRepository)
             {
-                if (isNameChanged)
-                {
+                case (Some(var oldRepo), Some(var newRepo)):
+                    if (isNameChanged)
+                    {
+                        _repositories.Remove(oldDirectoryName);
+                        _repositories[newRepo.Name] = newRepo;
+                        Renamed?.Invoke(oldRepo, newRepo);
+                    }
+                    break;
+                case (Some(var oldRepo), None()):
                     _repositories.Remove(oldDirectoryName);
-                    _repositories[newRepository.Name] = newRepository;
-                    Renamed?.Invoke(oldRepository, newRepository);
-                }
-            }
-            else if (wasRepository)
-            {
-                _repositories.Remove(oldDirectoryName);
-                Removed?.Invoke(oldRepository);
-            }
-            else if (isRepository)
-            {
-                _repositories[newRepository.Name] = newRepository;
-                Added?.Invoke(newRepository);
+                    Removed?.Invoke(oldRepo);
+                    break;
+                case (None(), Some(var newRepo)):
+                    _repositories[newRepo.Name] = newRepo;
+                    Added?.Invoke(newRepo);
+                    break;
             }
         }
 

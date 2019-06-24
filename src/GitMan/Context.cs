@@ -15,8 +15,9 @@ namespace GitMan
     {
         private readonly NotifyIcon _icon;
         private readonly Main _main;
-        private readonly Settings _settings;
+
         private readonly RemoteProvider[] _remoteProviders;
+        private readonly ActionSettings[] _actions;
         private readonly RepositoryDirectory _repositoryDirectory;
 
         private static void EmptyHandler(object sender, EventArgs eventArgs) { }
@@ -25,15 +26,17 @@ namespace GitMan
         {
             _main = new Main();
 
-            _settings = Settings.Load();
+            var settings = Settings.Load();
 
-            var azureProviders = _settings.AzureProviders
+            var azureProviders = settings.AzureProviders
                 .Select(provider => (RemoteProvider)new AzureProvider(provider));
-            var gitHubProviders = _settings.GitHubProviders
+            var gitHubProviders = settings.GitHubProviders
                 .Select(provider => (RemoteProvider)new GitHubProvider(provider));
             _remoteProviders = azureProviders.Concat(gitHubProviders).ToArray();
 
-            var directoryInfo = new DirectoryInfo(_settings.RepositoryFolder);
+            _actions = settings.Actions ?? Array.Empty<ActionSettings>();
+
+            var directoryInfo = new DirectoryInfo(settings.RepositoryFolder);
             _repositoryDirectory = new RepositoryDirectory(directoryInfo);
             _repositoryDirectory.Added += RepositoryAdded;
             _repositoryDirectory.Removed += RepositoryRemoved;
@@ -134,7 +137,7 @@ namespace GitMan
             var directoryInfo = new DirectoryInfo(repository.FullName);
 
             var subItems = new List<MenuItem>();
-            var actions = _settings.Actions.Select(settings => new RepositoryAction(settings));
+            var actions = _actions.Select(settings => new RepositoryAction(settings));
 
             foreach (var repositoryAction in actions)
             {
@@ -167,7 +170,7 @@ namespace GitMan
             foreach (var provider in _remoteProviders)
             {
                 var item = provider.MakeRemoteProviderItem(
-                    _settings.RepositoryFolder,
+                    _repositoryDirectory.Path,
                     existingRepositories);
 
                 items.Add(item);

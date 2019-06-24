@@ -18,12 +18,12 @@ namespace GitMan.Actions
         public RepositoryAction(ActionSettings settings)
         {
             _useShellExecute = settings.Shell.GetValueOrDefault(false);
-            _nameTemplate = settings.Name;
+            _nameTemplate = settings.Name ?? "Unknown";
             _commandTemplate = GetCommand(settings.Program, settings.Args);
-            _searchFilter = settings.SearchFilter;
+            _searchFilter = settings.SearchFilter ?? ".git";
         }
 
-        private static string GetCommand(string program, string[] args)
+        private static string GetCommand(string? program, string[]? args)
         {
             program ??= string.Empty;
             args ??= Array.Empty<string>();

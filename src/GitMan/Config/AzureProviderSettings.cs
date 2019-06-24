@@ -4,9 +4,9 @@ namespace GitMan.Config
 {
     internal class AzureProviderSettings
     {
-        public string Organization { get; set; }
-        public string Project { get; set; }
-        public string PersonalAccessToken { get; set; }
-        public Dictionary<string, string> DefaultConfig { get; set; } = new Dictionary<string, string>();
+        public string? Organization { get; set; }
+        public string? Project { get; set; }
+        public string? PersonalAccessToken { get; set; }
+        public Dictionary<string, string>? DefaultConfig { get; set; } = new Dictionary<string, string>();
     }
 }

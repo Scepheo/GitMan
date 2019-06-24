@@ -20,9 +20,12 @@ namespace GitMan.Providers
                   $"{settings.Organization} - {settings.Project}",
                   settings.DefaultConfig)
         {
-            _organization = settings.Organization;
-            _project = settings.Project;
-            _personalAccessToken = settings.PersonalAccessToken;
+            _organization = settings.Organization
+                 ?? throw new ArgumentNullException("Azure provider organization cannot be null");
+            _project = settings.Project
+                 ?? throw new ArgumentNullException("Azure provider project cannot be null");
+            _personalAccessToken = settings.PersonalAccessToken
+                 ?? throw new ArgumentNullException("Azure provider personal access token cannot be null");
         }
 
         private HttpClient GetClient()

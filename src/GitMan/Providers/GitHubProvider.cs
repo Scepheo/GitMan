@@ -18,8 +18,10 @@ namespace GitMan.Providers
                   $"GitHub - {settings.Username}",
                   settings.DefaultConfig)
         {
-            _username = settings.Username;
-            _personalAccessToken = settings.PersonalAccessToken;
+            _username = settings.Username
+                ?? throw new ArgumentNullException("GitHub provider username cannot be null");
+            _personalAccessToken = settings.PersonalAccessToken
+                ?? throw new ArgumentNullException("GitHub provider personal access token cannot be null");
         }
 
         private HttpClient GetClient()
